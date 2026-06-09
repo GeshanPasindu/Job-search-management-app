@@ -1,0 +1,19 @@
+{
+  "name": "job-search-crm",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/backend",
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:backend": "npm run dev -w apps/backend",
+    "dev:frontend": "npm run dev -w apps/frontend",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "prisma:generate": "prisma generate --schema apps/backend/prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema apps/backend/prisma/schema.prisma",
+    "seed": "tsx apps/backend/prisma/seed.ts"
+  }
+}

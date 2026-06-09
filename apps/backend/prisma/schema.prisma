@@ -1,0 +1,202 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String                @id @default(cuid())
+  email                String                @unique
+  name                 String
+  passwordHash         String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  profile              UserProfile?
+  skills               Skill[]
+  keywords             Keyword[]
+  jobs                 Job[]
+  cvTemplates          CvTemplate[]
+  coverLetterTemplates CoverLetterTemplate[]
+  applicationPackages  ApplicationPackage[]
+  applications         Application[]
+}
+
+model UserProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  summary           String   @default("")
+  preferredRoles    String[] @default([])
+  preferredLocations String[] @default([])
+  salaryExpectation String?
+  aiEnabled         Boolean  @default(false)
+  aiKeyConfigured   Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Skill {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  category  String?
+  priority  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+}
+
+model Keyword {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyword   String
+  category  String
+  enabled   Boolean  @default(true)
+  priority  Int      @default(0)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, keyword])
+}
+
+model JobSource {
+  id        String   @id @default(cuid())
+  sourceKey String   @unique
+  name      String
+  type      String
+  enabled   Boolean  @default(true)
+  baseUrl   String?
+  applyMode String
+  config    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Job {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceId         String?
+  sourceName       String?
+  title            String
+  company          String
+  location         String?
+  workplaceType    String?
+  jobUrl           String?
+  applyUrl         String?
+  applyEmail       String?
+  description      String
+  salaryText       String?
+  seniority        String?
+  jobType          String?
+  postedDate       DateTime?
+  deadline         DateTime?
+  score            Int      @default(0)
+  scoreLabel       String   @default("Maybe")
+  scoreExplanation String   @default("")
+  matchedSkills    String[] @default([])
+  missingSkills    String[] @default([])
+  matchingCategory String?
+  status           String   @default("New")
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  packages         ApplicationPackage[]
+  applications     Application[]
+}
+
+model CvTemplate {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleCategory       String
+  versionName        String
+  originalFileName   String?
+  storedFileName     String?
+  filePath           String?
+  mimeType           String?
+  summaryText        String   @default("")
+  skillsPriorityList String[] @default([])
+  isDefault          Boolean  @default(false)
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  packages           ApplicationPackage[]
+  applications       Application[]
+}
+
+model CoverLetterTemplate {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleCategory     String
+  versionName      String
+  originalFileName String?
+  storedFileName   String?
+  filePath         String?
+  mimeType         String?
+  content          String   @default("")
+  isDefault        Boolean  @default(false)
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  packages         ApplicationPackage[]
+  applications     Application[]
+}
+
+model ApplicationPackage {
+  id                       String               @id @default(cuid())
+  userId                   String
+  user                     User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId                    String
+  job                      Job                  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  cvTemplateId             String?
+  cvTemplate               CvTemplate?          @relation(fields: [cvTemplateId], references: [id], onDelete: SetNull)
+  coverLetterTemplateId    String?
+  coverLetterTemplate      CoverLetterTemplate? @relation(fields: [coverLetterTemplateId], references: [id], onDelete: SetNull)
+  roleCategory             String
+  cvSummarySuggestion      String
+  skillsOrderingSuggestion String[]             @default([])
+  coverLetterText          String
+  emailSubject             String
+  emailBody                String
+  checklist                String[]             @default([])
+  aiUsed                   Boolean              @default(false)
+  generatedAt              DateTime             @default(now())
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  applications             Application[]
+}
+
+model Application {
+  id                    String              @id @default(cuid())
+  userId                String
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId                 String
+  job                   Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  applicationPackageId  String?
+  applicationPackage    ApplicationPackage? @relation(fields: [applicationPackageId], references: [id], onDelete: SetNull)
+  cvTemplateId          String?
+  cvTemplate            CvTemplate?         @relation(fields: [cvTemplateId], references: [id], onDelete: SetNull)
+  coverLetterTemplateId String?
+  coverLetterTemplate   CoverLetterTemplate? @relation(fields: [coverLetterTemplateId], references: [id], onDelete: SetNull)
+  status                String              @default("Applied")
+  appliedDate           DateTime?
+  followUpDate          DateTime?
+  roleCategory          String?
+  recruiterName         String?
+  recruiterEmail        String?
+  salaryRange           String?
+  interviewDates        String[]            @default([])
+  rejectionReason       String?
+  notes                 String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+}

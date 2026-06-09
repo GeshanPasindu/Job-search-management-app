@@ -1,0 +1,142 @@
+[
+  {
+    "id": "linkedin",
+    "name": "LinkedIn",
+    "type": "search_url",
+    "enabled": true,
+    "baseUrl": "https://www.linkedin.com/jobs/search/",
+    "supportsFilters": {
+      "keywords": true,
+      "location": true,
+      "remote": true,
+      "datePosted": true,
+      "experienceLevel": true,
+      "sortBy": true
+    },
+    "queryParams": {
+      "keywords": "{{keywords}}",
+      "location": "{{location}}",
+      "f_WT": "{{workplaceType}}",
+      "f_TPR": "{{datePosted}}",
+      "f_E": "{{experienceLevel}}",
+      "sortBy": "{{sortBy}}"
+    },
+    "filterMappings": {
+      "workplaceType": {
+        "remote": "2",
+        "onsite": "1",
+        "hybrid": "3"
+      },
+      "datePosted": {
+        "past24h": "r86400",
+        "pastWeek": "r604800",
+        "pastMonth": "r2592000"
+      },
+      "experienceLevel": {
+        "internship": "1",
+        "entryLevel": "2",
+        "associate": "3"
+      },
+      "sortBy": {
+        "recent": "DD",
+        "relevant": "R"
+      }
+    },
+    "applyMode": "manual_open"
+  },
+  {
+    "id": "topjobs",
+    "name": "TopJobs.lk",
+    "type": "public_html",
+    "enabled": true,
+    "baseUrl": "https://www.topjobs.lk",
+    "supportsFilters": {
+      "keywords": true
+    },
+    "queryParams": {
+      "txtKeyWord": "{{keywords}}"
+    },
+    "importConfig": {
+      "mode": "homepage_listing",
+      "listingUrl": "https://www.topjobs.lk/"
+    },
+    "applyMode": "manual_open"
+  },
+  {
+    "id": "xpressjobs",
+    "name": "XpressJobs",
+    "type": "public_api",
+    "enabled": true,
+    "baseUrl": "https://xpress.jobs",
+    "supportsFilters": {
+      "keywords": true,
+      "location": true,
+      "remote": true
+    },
+    "queryParams": {
+      "KeyWord": "{{keywords}}",
+      "Location": "{{location}}"
+    },
+    "importConfig": {
+      "searchEndpoint": "https://xpress.jobs/api/jobs/searchJobs",
+      "detailsEndpoint": "https://xpress.jobs/api/jobs/publishedJob",
+      "jobUrlTemplate": "https://xpress.jobs/jobs/view/{{externalId}}"
+    },
+    "applyMode": "manual_open"
+  },
+  {
+    "id": "rooster",
+    "name": "Rooster",
+    "type": "search_url",
+    "enabled": true,
+    "baseUrl": "https://rooster.jobs/",
+    "supportsFilters": {
+      "keywords": true,
+      "location": true
+    },
+    "queryParams": {
+      "query": "{{keywords}}",
+      "location": "{{location}}"
+    },
+    "importConfig": {
+      "searchEndpoint": "https://api.rooster.jobs/jobSearch/jobs/search",
+      "jobUrlTemplate": "https://rooster.jobs/jobs/{{externalId}}"
+    },
+    "applyMode": "manual_open"
+  },
+  {
+    "id": "itpro",
+    "name": "ITPro.lk",
+    "type": "public_api",
+    "enabled": true,
+    "baseUrl": "https://itpro.lk",
+    "supportsFilters": {
+      "keywords": true,
+      "location": true
+    },
+    "queryParams": {
+      "keywords": "{{keywords}}",
+      "location": "{{location}}"
+    },
+    "importConfig": {
+      "searchEndpoint": "https://itpro.lk/api/v1/jobs",
+      "jobUrlTemplate": "https://itpro.lk/job/{{externalId}}/"
+    },
+    "applyMode": "manual_open"
+  },
+  {
+    "id": "adzuna",
+    "name": "Adzuna",
+    "type": "api",
+    "enabled": false,
+    "baseUrl": "https://api.adzuna.com/v1/api/jobs",
+    "applyMode": "manual_open"
+  },
+  {
+    "id": "greenhouse",
+    "name": "Greenhouse Company Boards",
+    "type": "company_board_api",
+    "enabled": false,
+    "applyMode": "manual_open"
+  }
+]

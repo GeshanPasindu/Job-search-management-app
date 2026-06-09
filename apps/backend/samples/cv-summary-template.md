@@ -1,0 +1,1 @@
+Backend and cloud-focused software engineer with hands-on experience in Node.js, TypeScript, REST APIs, authentication flows, SQL databases, AWS services, debugging, and production troubleshooting. Interested in integration, cloud support, technical implementation, solutions engineering, and data/BI implementation roles.
