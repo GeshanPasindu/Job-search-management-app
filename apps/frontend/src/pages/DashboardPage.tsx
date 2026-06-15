@@ -54,8 +54,11 @@ export function DashboardPage({ onGenerate }: { onGenerate: (jobId: string) => v
         <>
           <div className="stats-grid">
             <StatCard label="Jobs collected" value={stats.totalJobs} detail="Manual imports and saved postings" />
-            <StatCard label="Shortlisted" value={stats.shortlisted} detail="Ready for package work" />
-            <StatCard label="Applied" value={stats.applied} detail={`${stats.interviews} interview stage`} />
+            <StatCard label="New" value={stats.newJobs} detail="Freshly collected jobs" />
+            <StatCard label="Applied" value={stats.applied} detail="Applications sent" />
+            <StatCard label="On-Progress" value={stats.onProgress} detail="Active follow-up" />
+            <StatCard label="Interviewed" value={stats.interviewed} detail="Interview completed" />
+            <StatCard label="Rejected" value={stats.rejected} detail="Closed out" />
             <StatCard label="Average score" value={stats.averageMatchScore} detail="Across collected jobs" />
           </div>
 

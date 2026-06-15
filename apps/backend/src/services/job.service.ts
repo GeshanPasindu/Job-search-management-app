@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { jobStatuses } from "../domain/defaults";
 import { isTargetJob } from "../domain/job-relevance";
 import { ApiError, parseOptionalDate } from "../lib/http";
 import { getDefaultUser, prisma } from "../lib/prisma";
@@ -22,7 +23,7 @@ export const jobInputSchema = z.object({
   jobType: z.string().optional().nullable(),
   postedDate: z.unknown().optional(),
   deadline: z.unknown().optional(),
-  status: z.string().optional(),
+  status: z.enum(jobStatuses).optional(),
   notes: z.string().optional().nullable()
 });
 

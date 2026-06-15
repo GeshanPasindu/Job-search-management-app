@@ -11,13 +11,10 @@ export const roleCategories: RoleCategory[] = [
 
 export const jobStatuses: JobStatus[] = [
   "New",
-  "Shortlisted",
-  "Applying",
   "Applied",
-  "Interview",
-  "Rejected",
-  "On Hold",
-  "Archived"
+  "On-Progress",
+  "Interviewed",
+  "Rejected"
 ];
 
 export const preferredLocations = [

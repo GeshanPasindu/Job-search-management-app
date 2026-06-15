@@ -1,6 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  Archive,
   CheckCircle2,
   ExternalLink,
   ListFilter,
@@ -43,6 +42,7 @@ const importDefaults = {
 };
 
 const publicImportSourceIds = ["xpressjobs", "topjobs", "rooster", "itpro"];
+const statusFilterOptions = ["", ...jobStatuses];
 
 type PublicImportResult = Awaited<ReturnType<typeof api.jobs.importPublicAll>>;
 type JobsModal = "public" | "gmail" | "manual" | "filters" | null;
@@ -143,20 +143,20 @@ export function JobsPage({ onGenerate }: { onGenerate: (jobId: string) => void }
     [jobs, selectedJobId]
   );
 
-  async function load(showLoading = true) {
+  async function load(showLoading = true, nextFilters = filters) {
     if (showLoading) setLoading(true);
     setError("");
     try {
       const [loadedJobs, loadedSources, loadedGmailStatus] = await Promise.all([
         api.jobs.list(
           buildQuery({
-            search: filters.search,
-            status: filters.status,
-            category: filters.category,
-            sourceId: filters.sourceId,
-            workplaceType: filters.workplaceType,
-            minScore: filters.minScore,
-            sort: filters.sort
+            search: nextFilters.search,
+            status: nextFilters.status,
+            category: nextFilters.category,
+            sourceId: nextFilters.sourceId,
+            workplaceType: nextFilters.workplaceType,
+            minScore: nextFilters.minScore,
+            sort: nextFilters.sort
           })
         ),
         api.sources.list(),
@@ -165,7 +165,11 @@ export function JobsPage({ onGenerate }: { onGenerate: (jobId: string) => void }
       setJobs(loadedJobs);
       setSources(loadedSources);
       setGmailStatus(loadedGmailStatus);
-      if (!selectedJobId && loadedJobs[0]) setSelectedJobId(loadedJobs[0].id);
+      if (loadedJobs.length === 0) {
+        setSelectedJobId(null);
+      } else if (!selectedJobId || !loadedJobs.some((job) => job.id === selectedJobId)) {
+        setSelectedJobId(loadedJobs[0].id);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load jobs");
     } finally {
@@ -328,6 +332,12 @@ export function JobsPage({ onGenerate }: { onGenerate: (jobId: string) => void }
     setActiveModal(null);
   }
 
+  async function applyStatusFilter(status: string) {
+    const nextFilters = { ...filters, status };
+    setFilters(nextFilters);
+    await load(false, nextFilters);
+  }
+
   if (loading) return <LoadingState label="Loading jobs" />;
 
   return (
@@ -379,8 +389,27 @@ export function JobsPage({ onGenerate }: { onGenerate: (jobId: string) => void }
 
       <div className="two-column wide-left">
         <Panel title="Collected Jobs">
+          <div className="status-filter-row" aria-label="Filter jobs by status">
+            {statusFilterOptions.map((status) => {
+              const active = filters.status === status;
+              return (
+                <button
+                  key={status || "all"}
+                  type="button"
+                  className={active ? "status-filter-button active" : "status-filter-button"}
+                  aria-pressed={active}
+                  onClick={() => void applyStatusFilter(status)}
+                >
+                  {status || "All"}
+                </button>
+              );
+            })}
+          </div>
           {jobs.length === 0 ? (
-            <EmptyState title="No jobs yet" detail="Import a posting or generate search URLs first." />
+            <EmptyState
+              title={filters.status ? `No ${filters.status} jobs` : "No jobs yet"}
+              detail={filters.status ? "Choose another status or clear the filter." : "Import a posting or generate search URLs first."}
+            />
           ) : (
             <div className="table-wrap">
               <table>
@@ -485,21 +514,25 @@ export function JobsPage({ onGenerate }: { onGenerate: (jobId: string) => void }
                     Open apply link
                   </a>
                 ) : null}
-                <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "Shortlisted")}>
-                  <CheckCircle2 size={16} />
-                  Shortlist
+                <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "New")}>
+                  <PlusCircle size={16} />
+                  New
                 </button>
                 <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "Applied")}>
                   <CheckCircle2 size={16} />
                   Applied
                 </button>
+                <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "On-Progress")}>
+                  <RefreshCw size={16} />
+                  On-Progress
+                </button>
+                <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "Interviewed")}>
+                  <CheckCircle2 size={16} />
+                  Interviewed
+                </button>
                 <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "Rejected")}>
                   <XCircle size={16} />
-                  Reject
-                </button>
-                <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "Archived")}>
-                  <Archive size={16} />
-                  Archive
+                  Rejected
                 </button>
               </div>
               <pre className="description-box">{selectedJob.description}</pre>

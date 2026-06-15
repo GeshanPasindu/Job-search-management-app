@@ -228,6 +228,30 @@ nav button.active {
   overflow-wrap: anywhere;
 }
 
+.status-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.status-filter-button {
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid #cbd5df;
+  border-radius: 7px;
+  color: #243449;
+  background: #ffffff;
+  font-weight: 650;
+}
+
+.status-filter-button:hover,
+.status-filter-button.active {
+  border-color: #0b665f;
+  color: #0b665f;
+  background: var(--teal-soft);
+}
+
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -468,9 +492,15 @@ tbody tr:hover,
 }
 
 .status-badge.shortlisted,
-.status-badge.interview {
+.status-badge.interview,
+.status-badge.interviewed {
   color: #075985;
   background: #e0f2fe;
+}
+
+.status-badge.on-progress {
+  color: #7a4b00;
+  background: var(--amber-soft);
 }
 
 .status-badge.applying,
