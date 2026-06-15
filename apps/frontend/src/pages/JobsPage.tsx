@@ -417,6 +417,8 @@ export function JobsPage({ onGenerate }: { onGenerate: (jobId: string) => void }
                   <tr>
                     <th>Job</th>
                     <th>Platform</th>
+                    <th>Posted</th>
+                    <th>End date</th>
                     <th>Score</th>
                     <th>Category</th>
                     <th>Status</th>
@@ -435,6 +437,8 @@ export function JobsPage({ onGenerate }: { onGenerate: (jobId: string) => void }
                         <span>{job.company} {job.location ? `- ${job.location}` : ""}</span>
                       </td>
                       <td>{job.sourceName ?? job.sourceId ?? "Manual"}</td>
+                      <td>{formatDate(job.postedDate) || "-"}</td>
+                      <td>{formatDate(job.deadline) || "-"}</td>
                       <td>
                         <ScoreBadge score={job.score} label={job.scoreLabel} />
                       </td>
