@@ -234,10 +234,3 @@ Cover-letter templates can use:
 
 `{{candidateName}}` is also supported by the sample template and resolves to `DEFAULT_USER_NAME`.
 
-## Limitations
-
-- No multi-user login screen yet; this is a single-user MVP.
-- Gmail draft creation is represented by an `EmailDraftService` interface only.
-- AI customization is represented by an `AiApplicationAssistant` interface only. Deterministic templates work without an API key.
-- API and company-board adapters are placeholders until credentials and site-specific legal terms are reviewed.
-- Uploaded files are stored locally first. Add S3 by implementing the file storage abstraction behind `apps/backend/src/lib/file-storage.ts`.
