@@ -1,4 +1,4 @@
-import { getDefaultUser, prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 
 function countBy<T extends string | null>(items: T[]) {
   return items.reduce<Record<string, number>>((acc, item) => {
@@ -9,19 +9,18 @@ function countBy<T extends string | null>(items: T[]) {
 }
 
 export class DashboardService {
-  async stats() {
-    const user = await getDefaultUser();
+  async stats(userId: string) {
     const [jobs, applications, averageScore] = await Promise.all([
       prisma.job.findMany({
-        where: { userId: user.id },
+        where: { userId },
         orderBy: [{ createdAt: "desc" }]
       }),
       prisma.application.findMany({
-        where: { userId: user.id },
+        where: { userId },
         include: { job: true }
       }),
       prisma.job.aggregate({
-        where: { userId: user.id },
+        where: { userId },
         _avg: { score: true }
       })
     ]);

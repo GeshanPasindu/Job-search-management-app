@@ -13,6 +13,20 @@ export type JobStatus =
   | "Interviewed"
   | "Rejected";
 
+export type AuthUser = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  name: string;
+};
+
+export type AuthResponse = {
+  user: AuthUser;
+  accessToken: string;
+  refreshToken: string;
+};
+
 export type Keyword = {
   id: string;
   keyword: string;

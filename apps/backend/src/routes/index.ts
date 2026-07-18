@@ -1,6 +1,8 @@
 import { Router } from "express";
+import { requireAuth } from "../lib/auth.middleware";
 import applicationPackagesRoutes from "./application-packages.routes";
 import applicationsRoutes from "./applications.routes";
+import authRoutes from "./auth.routes";
 import dashboardRoutes from "./dashboard.routes";
 import emailRoutes from "./email.routes";
 import jobsRoutes from "./jobs.routes";
@@ -11,14 +13,18 @@ import templatesRoutes from "./templates.routes";
 
 const router = Router();
 
-router.use("/dashboard", dashboardRoutes);
-router.use("/email", emailRoutes);
-router.use("/keywords", keywordsRoutes);
-router.use("/sources", sourcesRoutes);
-router.use("/jobs", jobsRoutes);
-router.use("/templates", templatesRoutes);
-router.use("/application-packages", applicationPackagesRoutes);
-router.use("/applications", applicationsRoutes);
-router.use("/profile", profileRoutes);
+// Public routes (no auth required)
+router.use("/auth", authRoutes);
+
+// Protected routes (require auth)
+router.use("/dashboard", requireAuth, dashboardRoutes);
+router.use("/email", requireAuth, emailRoutes);
+router.use("/keywords", requireAuth, keywordsRoutes);
+router.use("/sources", requireAuth, sourcesRoutes);
+router.use("/jobs", requireAuth, jobsRoutes);
+router.use("/templates", requireAuth, templatesRoutes);
+router.use("/application-packages", requireAuth, applicationPackagesRoutes);
+router.use("/applications", requireAuth, applicationsRoutes);
+router.use("/profile", requireAuth, profileRoutes);
 
 export default router;

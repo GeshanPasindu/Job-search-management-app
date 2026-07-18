@@ -7,8 +7,8 @@ const dashboardService = new DashboardService();
 
 router.get(
   "/stats",
-  asyncHandler(async (_req, res) => {
-    res.json(await dashboardService.stats());
+  asyncHandler(async (req, res) => {
+    res.json(await dashboardService.stats(req.user!.id));
   })
 );
 

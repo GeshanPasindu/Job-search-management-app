@@ -2,6 +2,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import path from "node:path";
+import passport from "./lib/passport";
 import routes from "./routes";
 import { errorMiddleware } from "./lib/http";
 
@@ -14,11 +15,13 @@ const corsOrigin = process.env.CORS_ORIGIN ?? "http://localhost:5173";
 
 app.use(
   cors({
-    origin: corsOrigin.split(",").map((origin) => origin.trim())
+    origin: corsOrigin.split(",").map((origin) => origin.trim()),
+    credentials: true
   })
 );
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use(passport.initialize());
 app.use("/uploads", express.static(process.env.UPLOAD_DIR ?? "uploads"));
 
 app.get("/health", (_req, res) => {

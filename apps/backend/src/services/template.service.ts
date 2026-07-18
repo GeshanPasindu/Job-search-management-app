@@ -3,7 +3,7 @@ import path from "node:path";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { ApiError, parseStringList } from "../lib/http";
-import { getDefaultUser, prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { StoredFile } from "../lib/file-storage";
 
 const templateTypeSchema = z.union([z.literal("cv"), z.literal("coverLetter"), z.literal("cover-letter")]);
@@ -55,15 +55,14 @@ function readEditableTemplateFile(storedFile: StoredFile) {
 }
 
 export class TemplateService {
-  async list() {
-    const user = await getDefaultUser();
+  async list(userId: string) {
     const [cvTemplates, coverLetterTemplates] = await Promise.all([
       prisma.cvTemplate.findMany({
-        where: { userId: user.id },
+        where: { userId },
         orderBy: [{ roleCategory: "asc" }, { isDefault: "desc" }, { updatedAt: "desc" }]
       }),
       prisma.coverLetterTemplate.findMany({
-        where: { userId: user.id },
+        where: { userId },
         orderBy: [{ roleCategory: "asc" }, { isDefault: "desc" }, { updatedAt: "desc" }]
       })
     ]);
@@ -71,22 +70,21 @@ export class TemplateService {
     return { cvTemplates, coverLetterTemplates };
   }
 
-  async create(input: TemplateUploadInput, storedFile: StoredFile = {}) {
-    const user = await getDefaultUser();
+  async create(userId: string, input: TemplateUploadInput, storedFile: StoredFile = {}) {
     const type = normalizeTemplateType(input.type);
     const isDefault = parseBoolean(input.isDefault);
 
     if (type === "cv") {
       if (isDefault) {
         await prisma.cvTemplate.updateMany({
-          where: { userId: user.id, roleCategory: input.roleCategory },
+          where: { userId, roleCategory: input.roleCategory },
           data: { isDefault: false }
         });
       }
 
       return prisma.cvTemplate.create({
         data: {
-          userId: user.id,
+          userId,
           roleCategory: input.roleCategory,
           versionName: input.versionName,
           summaryText: input.summaryText ?? "",
@@ -100,14 +98,14 @@ export class TemplateService {
 
     if (isDefault) {
       await prisma.coverLetterTemplate.updateMany({
-        where: { userId: user.id, roleCategory: input.roleCategory },
+        where: { userId, roleCategory: input.roleCategory },
         data: { isDefault: false }
       });
     }
 
     return prisma.coverLetterTemplate.create({
       data: {
-        userId: user.id,
+        userId,
         roleCategory: input.roleCategory,
         versionName: input.versionName,
         content: input.content || readEditableTemplateFile(storedFile),
@@ -118,15 +116,14 @@ export class TemplateService {
     });
   }
 
-  async get(id: string) {
-    const user = await getDefaultUser();
-    const cvTemplate = await prisma.cvTemplate.findFirst({ where: { id, userId: user.id } });
+  async get(userId: string, id: string) {
+    const cvTemplate = await prisma.cvTemplate.findFirst({ where: { id, userId } });
     if (cvTemplate) {
       return { type: "cv" as const, template: cvTemplate };
     }
 
     const coverLetterTemplate = await prisma.coverLetterTemplate.findFirst({
-      where: { id, userId: user.id }
+      where: { id, userId }
     });
     if (coverLetterTemplate) {
       return { type: "coverLetter" as const, template: coverLetterTemplate };
@@ -135,15 +132,14 @@ export class TemplateService {
     throw new ApiError(404, "Template was not found.");
   }
 
-  async update(id: string, input: TemplateUpdateInput) {
-    const user = await getDefaultUser();
-    const existing = await this.get(id);
+  async update(userId: string, id: string, input: TemplateUpdateInput) {
+    const existing = await this.get(userId, id);
 
     if (existing.type === "cv") {
       const roleCategory = input.roleCategory ?? existing.template.roleCategory;
       if (parseBoolean(input.isDefault)) {
         await prisma.cvTemplate.updateMany({
-          where: { userId: user.id, roleCategory, id: { not: id } },
+          where: { userId, roleCategory, id: { not: id } },
           data: { isDefault: false }
         });
       }
@@ -165,7 +161,7 @@ export class TemplateService {
     const roleCategory = input.roleCategory ?? existing.template.roleCategory;
     if (parseBoolean(input.isDefault)) {
       await prisma.coverLetterTemplate.updateMany({
-        where: { userId: user.id, roleCategory, id: { not: id } },
+        where: { userId, roleCategory, id: { not: id } },
         data: { isDefault: false }
       });
     }
@@ -181,8 +177,8 @@ export class TemplateService {
     return prisma.coverLetterTemplate.update({ where: { id }, data });
   }
 
-  async delete(id: string) {
-    const existing = await this.get(id);
+  async delete(userId: string, id: string) {
+    const existing = await this.get(userId, id);
     if (existing.type === "cv") {
       await prisma.cvTemplate.delete({ where: { id } });
     } else {

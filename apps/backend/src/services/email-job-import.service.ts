@@ -6,7 +6,7 @@ import type { gmail_v1 } from "googleapis";
 import { z } from "zod";
 import { isTargetJob } from "../domain/job-relevance";
 import { ApiError } from "../lib/http";
-import { getDefaultUser, prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { ScoringService } from "./scoring.service";
 
 const gmailReadonlyScope = "https://www.googleapis.com/auth/gmail.readonly";
@@ -281,7 +281,7 @@ export class EmailJobImportService {
     return { connected: true };
   }
 
-  async importJobAlerts(input: z.infer<typeof emailJobImportSchema>) {
+  async importJobAlerts(userId: string, input: z.infer<typeof emailJobImportSchema>) {
     const client = createOAuthClient();
     client.setCredentials(readStoredToken());
     const gmail = google.gmail({ version: "v1", auth: client });
@@ -329,7 +329,7 @@ export class EmailJobImportService {
     const filteredCount = dedupedJobs.length - relevantJobs.length;
 
     for (const parsedJob of relevantJobs.slice(0, input.limit)) {
-      const result = await this.saveParsedJob(parsedJob);
+      const result = await this.saveParsedJob(userId, parsedJob);
       if (result.created) saved.push(result.job);
       else skipped.push(result.job);
     }
@@ -355,11 +355,10 @@ export class EmailJobImportService {
     });
   }
 
-  private async saveParsedJob(parsedJob: ParsedEmailJob) {
-    const user = await getDefaultUser();
+  private async saveParsedJob(userId: string, parsedJob: ParsedEmailJob) {
     const existing = await prisma.job.findFirst({
       where: {
-        userId: user.id,
+        userId,
         jobUrl: parsedJob.jobUrl
       }
     });
@@ -368,10 +367,10 @@ export class EmailJobImportService {
       return { created: false, job: existing };
     }
 
-    const score = await this.scoringService.scoreJob(parsedJob);
+    const score = await this.scoringService.scoreJob(parsedJob, userId);
     const job = await prisma.job.create({
       data: {
-        userId: user.id,
+        userId,
         sourceId: parsedJob.sourceId,
         sourceName: parsedJob.sourceName,
         title: parsedJob.title,

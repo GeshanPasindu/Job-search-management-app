@@ -13,14 +13,14 @@ router.post(
   "/generate",
   asyncHandler(async (req, res) => {
     const body = validateBody(generateApplicationPackageSchema, req.body);
-    res.status(201).json(await applicationPackageService.generate(body));
+    res.status(201).json(await applicationPackageService.generate(req.user!.id, body));
   })
 );
 
 router.get(
   "/:id",
   asyncHandler(async (req, res) => {
-    res.json(await applicationPackageService.get(req.params.id));
+    res.json(await applicationPackageService.get(req.user!.id, req.params.id));
   })
 );
 
@@ -28,7 +28,7 @@ router.put(
   "/:id",
   asyncHandler(async (req, res) => {
     const body = validateBody(updateApplicationPackageSchema, req.body);
-    res.json(await applicationPackageService.update(req.params.id, body));
+    res.json(await applicationPackageService.update(req.user!.id, req.params.id, body));
   })
 );
 

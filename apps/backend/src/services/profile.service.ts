@@ -4,7 +4,7 @@ import {
   defaultPreferredRoles,
   defaultSkills
 } from "../domain/defaults";
-import { getDefaultUser, prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 
 export type ProfileUpdateInput = {
   summary?: string;
@@ -16,15 +16,15 @@ export type ProfileUpdateInput = {
 };
 
 export class ProfileService {
-  async ensureProfile() {
-    const user = await getDefaultUser();
+  async ensureProfile(userId: string) {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
     const profile = await prisma.userProfile.upsert({
-      where: { userId: user.id },
+      where: { userId },
       update: {
         aiKeyConfigured: Boolean(process.env.AI_API_KEY)
       },
       create: {
-        userId: user.id,
+        userId,
         summary:
           "Backend and cloud-focused engineer targeting integration, cloud support, implementation, solutions, and data/BI roles.",
         preferredRoles: defaultPreferredRoles,
@@ -33,11 +33,11 @@ export class ProfileService {
       }
     });
 
-    const skillCount = await prisma.skill.count({ where: { userId: user.id } });
+    const skillCount = await prisma.skill.count({ where: { userId } });
     if (skillCount === 0) {
       await prisma.skill.createMany({
         data: defaultSkills.map((name, index) => ({
-          userId: user.id,
+          userId,
           name,
           priority: defaultSkills.length - index
         })),
@@ -46,15 +46,15 @@ export class ProfileService {
     }
 
     const skills = await prisma.skill.findMany({
-      where: { userId: user.id },
+      where: { userId },
       orderBy: [{ priority: "desc" }, { name: "asc" }]
     });
 
     return { user, profile, skills };
   }
 
-  async get() {
-    const { user, profile, skills } = await this.ensureProfile();
+  async get(userId: string) {
+    const { user, profile, skills } = await this.ensureProfile(userId);
     return {
       user,
       profile,
@@ -62,8 +62,8 @@ export class ProfileService {
     };
   }
 
-  async update(input: ProfileUpdateInput) {
-    const { user } = await this.ensureProfile();
+  async update(userId: string, input: ProfileUpdateInput) {
+    const { user } = await this.ensureProfile(userId);
 
     const updateData: Prisma.UserProfileUpdateInput = {};
     if (input.summary !== undefined) updateData.summary = input.summary;
@@ -106,6 +106,6 @@ export class ProfileService {
       });
     }
 
-    return this.get();
+    return this.get(userId);
   }
 }

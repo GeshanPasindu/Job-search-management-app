@@ -828,3 +828,63 @@ tbody tr:hover,
     grid-template-columns: 1fr;
   }
 }
+
+/* ==================
+   Auth Pages
+   ================== */
+
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: var(--surface-subtle);
+  padding: 20px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 40px;
+  box-shadow: var(--shadow);
+}
+
+.auth-brand {
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.auth-footer {
+  margin-top: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.auth-footer .link-button {
+  color: var(--teal);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.auth-footer .link-button:hover {
+  text-decoration: underline;
+}

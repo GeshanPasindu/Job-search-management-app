@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ApiError } from "../lib/http";
-import { getDefaultUser, prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 
 export const keywordCreateSchema = z.object({
   keyword: z.string().min(1),
@@ -13,39 +13,35 @@ export const keywordCreateSchema = z.object({
 export const keywordUpdateSchema = keywordCreateSchema.partial();
 
 export class KeywordService {
-  async list(includeDisabled = true) {
-    const user = await getDefaultUser();
+  async list(userId: string, includeDisabled = true) {
     return prisma.keyword.findMany({
       where: {
-        userId: user.id,
+        userId,
         ...(includeDisabled ? {} : { enabled: true })
       },
       orderBy: [{ enabled: "desc" }, { priority: "desc" }, { keyword: "asc" }]
     });
   }
 
-  async create(input: z.infer<typeof keywordCreateSchema>) {
-    const user = await getDefaultUser();
+  async create(userId: string, input: z.infer<typeof keywordCreateSchema>) {
     return prisma.keyword.create({
       data: {
         ...input,
-        userId: user.id
+        userId
       }
     });
   }
 
-  async update(id: string, input: z.infer<typeof keywordUpdateSchema>) {
-    const user = await getDefaultUser();
-    await this.ensureOwnedKeyword(id, user.id);
+  async update(userId: string, id: string, input: z.infer<typeof keywordUpdateSchema>) {
+    await this.ensureOwnedKeyword(id, userId);
     return prisma.keyword.update({
       where: { id },
       data: input
     });
   }
 
-  async delete(id: string) {
-    const user = await getDefaultUser();
-    await this.ensureOwnedKeyword(id, user.id);
+  async delete(userId: string, id: string) {
+    await this.ensureOwnedKeyword(id, userId);
     await prisma.keyword.delete({ where: { id } });
     return { id };
   }

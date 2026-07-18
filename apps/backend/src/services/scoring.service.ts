@@ -1,5 +1,5 @@
 import { defaultSkills } from "../domain/defaults";
-import { getDefaultUser, prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 
 export type ScorableJob = {
   title: string;
@@ -179,13 +179,19 @@ function skillMatchesText(skill: string, text: string) {
 }
 
 export class ScoringService {
-  async scoreJob(job: ScorableJob): Promise<JobScore> {
-    const user = await getDefaultUser();
-    const storedSkills = await prisma.skill.findMany({
-      where: { userId: user.id },
-      orderBy: [{ priority: "desc" }, { name: "asc" }]
-    });
-    const profileSkills = storedSkills.length > 0 ? storedSkills.map((skill) => skill.name) : defaultSkills;
+  async scoreJob(job: ScorableJob, userId?: string): Promise<JobScore> {
+    let profileSkills: string[];
+
+    if (userId) {
+      const storedSkills = await prisma.skill.findMany({
+        where: { userId },
+        orderBy: [{ priority: "desc" }, { name: "asc" }]
+      });
+      profileSkills = storedSkills.length > 0 ? storedSkills.map((skill) => skill.name) : defaultSkills;
+    } else {
+      profileSkills = defaultSkills;
+    }
+
     const title = job.title.toLowerCase();
     const description = (job.description ?? "").toLowerCase();
     const allText = `${title} ${description} ${job.seniority ?? ""}`.toLowerCase();
