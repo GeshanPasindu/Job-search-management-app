@@ -9,13 +9,10 @@ export const roleCategories = [
 
 export const jobStatuses = [
   "New",
-  "Shortlisted",
-  "Applying",
   "Applied",
-  "Interview",
-  "Rejected",
-  "On Hold",
-  "Archived"
+  "On-Progress",
+  "Interviewed",
+  "Rejected"
 ] as const;
 
 export const defaultKeywords = [

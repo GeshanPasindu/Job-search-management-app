@@ -1,6 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  Archive,
   CheckCircle2,
   ExternalLink,
   ListFilter,
@@ -43,9 +42,10 @@ const importDefaults = {
 };
 
 const publicImportSourceIds = ["xpressjobs", "topjobs", "rooster", "itpro"];
+const statusFilterOptions = ["", ...jobStatuses];
 
 type PublicImportResult = Awaited<ReturnType<typeof api.jobs.importPublicAll>>;
-type JobsModal = "public" | "gmail" | "manual" | "filters" | null;
+type JobsModal = "public" | "gmail" | "manual" | "filters" | "detail" | null;
 
 function compactPayload(values: Record<string, unknown>) {
   return Object.fromEntries(
@@ -72,16 +72,18 @@ function describePublicImport(result: PublicImportResult, label: string) {
 function JobsModalShell({
   title,
   children,
-  onClose
+  onClose,
+  wide
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  wide?: boolean;
 }) {
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section
-        className="modal-panel"
+        className={wide ? "modal-panel modal-panel-wide" : "modal-panel"}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -143,20 +145,20 @@ export function JobsPage({ onGenerate }: { onGenerate: (jobId: string) => void }
     [jobs, selectedJobId]
   );
 
-  async function load(showLoading = true) {
+  async function load(showLoading = true, nextFilters = filters) {
     if (showLoading) setLoading(true);
     setError("");
     try {
       const [loadedJobs, loadedSources, loadedGmailStatus] = await Promise.all([
         api.jobs.list(
           buildQuery({
-            search: filters.search,
-            status: filters.status,
-            category: filters.category,
-            sourceId: filters.sourceId,
-            workplaceType: filters.workplaceType,
-            minScore: filters.minScore,
-            sort: filters.sort
+            search: nextFilters.search,
+            status: nextFilters.status,
+            category: nextFilters.category,
+            sourceId: nextFilters.sourceId,
+            workplaceType: nextFilters.workplaceType,
+            minScore: nextFilters.minScore,
+            sort: nextFilters.sort
           })
         ),
         api.sources.list(),
@@ -165,7 +167,15 @@ export function JobsPage({ onGenerate }: { onGenerate: (jobId: string) => void }
       setJobs(loadedJobs);
       setSources(loadedSources);
       setGmailStatus(loadedGmailStatus);
-      if (!selectedJobId && loadedJobs[0]) setSelectedJobId(loadedJobs[0].id);
+      if (loadedJobs.length === 0) {
+        setSelectedJobId(null);
+        if (activeModal === "detail") setActiveModal(null);
+      } else if (!selectedJobId) {
+        setSelectedJobId(loadedJobs[0].id);
+      } else if (!loadedJobs.some((job) => job.id === selectedJobId)) {
+        setSelectedJobId(loadedJobs[0].id);
+        if (activeModal === "detail") setActiveModal(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load jobs");
     } finally {
@@ -328,6 +338,17 @@ export function JobsPage({ onGenerate }: { onGenerate: (jobId: string) => void }
     setActiveModal(null);
   }
 
+  async function applyStatusFilter(status: string) {
+    const nextFilters = { ...filters, status };
+    setFilters(nextFilters);
+    await load(false, nextFilters);
+  }
+
+  function openJobDetail(job: Job) {
+    setSelectedJobId(job.id);
+    setActiveModal("detail");
+  }
+
   if (loading) return <LoadingState label="Loading jobs" />;
 
   return (
@@ -377,138 +398,176 @@ export function JobsPage({ onGenerate }: { onGenerate: (jobId: string) => void }
         </span>
       </div>
 
-      <div className="two-column wide-left">
-        <Panel title="Collected Jobs">
-          {jobs.length === 0 ? (
-            <EmptyState title="No jobs yet" detail="Import a posting or generate search URLs first." />
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Job</th>
-                    <th>Platform</th>
-                    <th>Score</th>
-                    <th>Category</th>
-                    <th>Status</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {jobs.map((job) => (
-                    <tr
-                      key={job.id}
-                      className={selectedJob?.id === job.id ? "selected-row" : undefined}
-                      onClick={() => setSelectedJobId(job.id)}
+      <Panel title="Collected Jobs">
+        <div className="status-filter-row" aria-label="Filter jobs by status">
+          {statusFilterOptions.map((status) => {
+            const active = filters.status === status;
+            return (
+              <button
+                key={status || "all"}
+                type="button"
+                className={active ? "status-filter-button active" : "status-filter-button"}
+                aria-pressed={active}
+                onClick={() => void applyStatusFilter(status)}
+              >
+                {status || "All"}
+              </button>
+            );
+          })}
+        </div>
+        {jobs.length === 0 ? (
+          <EmptyState
+            title={filters.status ? `No ${filters.status} jobs` : "No jobs yet"}
+            detail={filters.status ? "Choose another status or clear the filter." : "Import a posting or generate search URLs first."}
+          />
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Job</th>
+                  <th>Platform</th>
+                  <th>Posted</th>
+                  <th>End date</th>
+                  <th>Score</th>
+                  <th>Category</th>
+                  <th>Status</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {jobs.map((job) => (
+                  <tr
+                    key={job.id}
+                    className={
+                      activeModal === "detail" && selectedJob?.id === job.id
+                        ? "selected-row clickable-row"
+                        : "clickable-row"
+                    }
+                    tabIndex={0}
+                    onClick={() => openJobDetail(job)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openJobDetail(job);
+                      }
+                    }}
+                  >
+                    <td>
+                      <strong>{job.title}</strong>
+                      <span>{job.company} {job.location ? `- ${job.location}` : ""}</span>
+                    </td>
+                    <td>{job.sourceName ?? job.sourceId ?? "Manual"}</td>
+                    <td>{formatDate(job.postedDate) || "-"}</td>
+                    <td>{formatDate(job.deadline) || "-"}</td>
+                    <td>
+                      <ScoreBadge score={job.score} label={job.scoreLabel} />
+                    </td>
+                    <td>{job.matchingCategory}</td>
+                    <td>
+                      <StatusBadge status={job.status} />
+                    </td>
+                    <td
+                      className="row-actions"
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => event.stopPropagation()}
                     >
-                      <td>
-                        <strong>{job.title}</strong>
-                        <span>{job.company} {job.location ? `- ${job.location}` : ""}</span>
-                      </td>
-                      <td>{job.sourceName ?? job.sourceId ?? "Manual"}</td>
-                      <td>
-                        <ScoreBadge score={job.score} label={job.scoreLabel} />
-                      </td>
-                      <td>{job.matchingCategory}</td>
-                      <td>
-                        <StatusBadge status={job.status} />
-                      </td>
-                      <td className="row-actions" onClick={(event) => event.stopPropagation()}>
-                        <button className="icon-button" onClick={() => void rescore(job)} title="Rescore job">
-                          <RefreshCw size={16} />
-                        </button>
-                        <button className="icon-button" onClick={() => onGenerate(job.id)} title="Generate package">
-                          <Sparkles size={16} />
-                        </button>
-                        <button className="icon-button danger" onClick={() => void remove(job)} title="Delete job">
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Panel>
-
-        <Panel title="Job Detail">
-          {selectedJob ? (
-            <div className="detail-stack">
-              <div>
-                <h3>{selectedJob.title}</h3>
-                <p>{selectedJob.company}</p>
-              </div>
-              <div className="detail-row">
-                <ScoreBadge score={selectedJob.score} label={selectedJob.scoreLabel} />
-                <StatusBadge status={selectedJob.status} />
-                <span className="pill">{selectedJob.matchingCategory}</span>
-              </div>
-              <p className="muted">{selectedJob.scoreExplanation}</p>
-              <div className="tag-list">
-                {selectedJob.matchedSkills.map((skill) => (
-                  <span key={skill}>{skill}</span>
+                      <button className="icon-button" onClick={() => void rescore(job)} title="Rescore job">
+                        <RefreshCw size={16} />
+                      </button>
+                      <button className="icon-button" onClick={() => onGenerate(job.id)} title="Generate package">
+                        <Sparkles size={16} />
+                      </button>
+                      <button className="icon-button danger" onClick={() => void remove(job)} title="Delete job">
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
                 ))}
-              </div>
-              {selectedJob.missingSkills.length > 0 ? (
-                <div>
-                  <strong>Review gaps</strong>
-                  <div className="tag-list warning">
-                    {selectedJob.missingSkills.map((skill) => (
-                      <span key={skill}>{skill}</span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              <dl className="details-list">
-                <div>
-                  <dt>Source</dt>
-                  <dd>{selectedJob.sourceName ?? selectedJob.sourceId ?? "Manual"}</dd>
-                </div>
-                <div>
-                  <dt>Posted</dt>
-                  <dd>{formatDate(selectedJob.postedDate)}</dd>
-                </div>
-                <div>
-                  <dt>Deadline</dt>
-                  <dd>{formatDate(selectedJob.deadline)}</dd>
-                </div>
-                <div>
-                  <dt>Salary</dt>
-                  <dd>{selectedJob.salaryText ?? "Not listed"}</dd>
-                </div>
-              </dl>
-              <div className="button-row">
-                {(selectedJob.applyUrl || selectedJob.jobUrl) ? (
-                  <a className="secondary-button" href={selectedJob.applyUrl ?? selectedJob.jobUrl ?? "#"} target="_blank" rel="noreferrer">
-                    <ExternalLink size={16} />
-                    Open apply link
-                  </a>
-                ) : null}
-                <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "Shortlisted")}>
-                  <CheckCircle2 size={16} />
-                  Shortlist
-                </button>
-                <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "Applied")}>
-                  <CheckCircle2 size={16} />
-                  Applied
-                </button>
-                <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "Rejected")}>
-                  <XCircle size={16} />
-                  Reject
-                </button>
-                <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "Archived")}>
-                  <Archive size={16} />
-                  Archive
-                </button>
-              </div>
-              <pre className="description-box">{selectedJob.description}</pre>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
+
+      {activeModal === "detail" && selectedJob ? (
+        <JobsModalShell title="Job Detail" onClose={() => setActiveModal(null)} wide>
+          <div className="detail-stack">
+            <div>
+              <h3>{selectedJob.title}</h3>
+              <p>{selectedJob.company}</p>
             </div>
-          ) : (
-            <EmptyState title="Select a job" />
-          )}
-        </Panel>
-      </div>
+            <div className="detail-row">
+              <ScoreBadge score={selectedJob.score} label={selectedJob.scoreLabel} />
+              <StatusBadge status={selectedJob.status} />
+              <span className="pill">{selectedJob.matchingCategory}</span>
+            </div>
+            <p className="muted">{selectedJob.scoreExplanation}</p>
+            <div className="tag-list">
+              {selectedJob.matchedSkills.map((skill) => (
+                <span key={skill}>{skill}</span>
+              ))}
+            </div>
+            {selectedJob.missingSkills.length > 0 ? (
+              <div>
+                <strong>Review gaps</strong>
+                <div className="tag-list warning">
+                  {selectedJob.missingSkills.map((skill) => (
+                    <span key={skill}>{skill}</span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <dl className="details-list">
+              <div>
+                <dt>Source</dt>
+                <dd>{selectedJob.sourceName ?? selectedJob.sourceId ?? "Manual"}</dd>
+              </div>
+              <div>
+                <dt>Posted</dt>
+                <dd>{formatDate(selectedJob.postedDate)}</dd>
+              </div>
+              <div>
+                <dt>Deadline</dt>
+                <dd>{formatDate(selectedJob.deadline)}</dd>
+              </div>
+              <div>
+                <dt>Salary</dt>
+                <dd>{selectedJob.salaryText ?? "Not listed"}</dd>
+              </div>
+            </dl>
+            <div className="button-row">
+              {(selectedJob.applyUrl || selectedJob.jobUrl) ? (
+                <a className="secondary-button" href={selectedJob.applyUrl ?? selectedJob.jobUrl ?? "#"} target="_blank" rel="noreferrer">
+                  <ExternalLink size={16} />
+                  Open apply link
+                </a>
+              ) : null}
+              <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "New")}>
+                <PlusCircle size={16} />
+                New
+              </button>
+              <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "Applied")}>
+                <CheckCircle2 size={16} />
+                Applied
+              </button>
+              <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "On-Progress")}>
+                <RefreshCw size={16} />
+                On-Progress
+              </button>
+              <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "Interviewed")}>
+                <CheckCircle2 size={16} />
+                Interviewed
+              </button>
+              <button className="secondary-button" onClick={() => void updateJobStatus(selectedJob, "Rejected")}>
+                <XCircle size={16} />
+                Rejected
+              </button>
+            </div>
+            <pre className="description-box">{selectedJob.description}</pre>
+          </div>
+        </JobsModalShell>
+      ) : null}
 
       {activeModal === "public" ? (
         <JobsModalShell title="Public Job Import" onClose={() => setActiveModal(null)}>

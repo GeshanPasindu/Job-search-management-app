@@ -34,9 +34,10 @@ export class DashboardService {
 
     return {
       totalJobs: jobs.length,
-      shortlisted: jobs.filter((job) => job.status === "Shortlisted").length,
+      newJobs: jobs.filter((job) => job.status === "New").length,
       applied: jobs.filter((job) => job.status === "Applied").length,
-      interviews: jobs.filter((job) => job.status === "Interview").length,
+      onProgress: jobs.filter((job) => job.status === "On-Progress").length,
+      interviewed: jobs.filter((job) => job.status === "Interviewed").length,
       rejected: jobs.filter((job) => job.status === "Rejected").length,
       averageMatchScore: Math.round(averageScore._avg.score ?? 0),
       applicationsByStatus: countBy(applications.map((application) => application.status)),

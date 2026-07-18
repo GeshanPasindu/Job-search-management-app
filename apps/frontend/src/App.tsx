@@ -24,12 +24,12 @@ import { useState } from "react";
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "jobs", label: "Jobs", icon: Briefcase },
+  { id: "search", label: "Search Builder", icon: Search },
+  { id: "generator", label: "Generator", icon: Sparkles },
   { id: "keywords", label: "Keywords", icon: KeyRound },
   { id: "sources", label: "Sources", icon: Database },
-  { id: "search", label: "Search Builder", icon: Search },
-  { id: "jobs", label: "Jobs", icon: Briefcase },
   { id: "templates", label: "Templates", icon: FileText },
-  { id: "generator", label: "Generator", icon: Sparkles },
   { id: "applications", label: "Applications", icon: ClipboardList },
   { id: "settings", label: "Settings", icon: Settings },
 ] as const;
@@ -53,8 +53,8 @@ export default function App() {
         <div className="brand">
           <span>JS</span>
           <div>
-            <strong>Job Search CRM</strong>
-            <small>Application Assistant</small>
+            <strong>Job Search Assistant</strong>
+            <small>Application process support</small>
           </div>
         </div>
         <nav>

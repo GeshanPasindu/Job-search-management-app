@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { jobStatuses } from "../domain/defaults";
 import { ApiError, parseOptionalDate } from "../lib/http";
 import { getDefaultUser, prisma } from "../lib/prisma";
 
@@ -8,7 +9,7 @@ export const applicationInputSchema = z.object({
   applicationPackageId: z.string().optional().nullable(),
   cvTemplateId: z.string().optional().nullable(),
   coverLetterTemplateId: z.string().optional().nullable(),
-  status: z.string().default("Applied"),
+  status: z.enum(jobStatuses).default("Applied"),
   appliedDate: z.unknown().optional(),
   followUpDate: z.unknown().optional(),
   roleCategory: z.string().optional().nullable(),

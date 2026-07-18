@@ -8,13 +8,10 @@ export type RoleCategory =
 
 export type JobStatus =
   | "New"
-  | "Shortlisted"
-  | "Applying"
   | "Applied"
-  | "Interview"
-  | "Rejected"
-  | "On Hold"
-  | "Archived";
+  | "On-Progress"
+  | "Interviewed"
+  | "Rejected";
 
 export type Keyword = {
   id: string;
@@ -134,9 +131,10 @@ export type Application = {
 
 export type DashboardStats = {
   totalJobs: number;
-  shortlisted: number;
+  newJobs: number;
   applied: number;
-  interviews: number;
+  onProgress: number;
+  interviewed: number;
   rejected: number;
   averageMatchScore: number;
   applicationsByStatus: Record<string, number>;

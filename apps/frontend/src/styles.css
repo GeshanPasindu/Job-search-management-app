@@ -228,6 +228,30 @@ nav button.active {
   overflow-wrap: anywhere;
 }
 
+.status-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.status-filter-button {
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid #cbd5df;
+  border-radius: 7px;
+  color: #243449;
+  background: #ffffff;
+  font-weight: 650;
+}
+
+.status-filter-button:hover,
+.status-filter-button.active {
+  border-color: #0b665f;
+  color: #0b665f;
+  background: var(--teal-soft);
+}
+
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -427,6 +451,15 @@ tbody tr:hover,
   background: #f2f7f8;
 }
 
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:focus-visible {
+  outline: 2px solid #0b665f;
+  outline-offset: -2px;
+}
+
 .score-badge,
 .status-badge,
 .pill {
@@ -468,9 +501,15 @@ tbody tr:hover,
 }
 
 .status-badge.shortlisted,
-.status-badge.interview {
+.status-badge.interview,
+.status-badge.interviewed {
   color: #075985;
   background: #e0f2fe;
+}
+
+.status-badge.on-progress {
+  color: #7a4b00;
+  background: var(--amber-soft);
 }
 
 .status-badge.applying,
@@ -699,6 +738,10 @@ tbody tr:hover,
   border-radius: 8px;
   background: #ffffff;
   box-shadow: 0 18px 44px rgba(23, 32, 51, 0.22);
+}
+
+.modal-panel-wide {
+  width: min(1120px, 100%);
 }
 
 .modal-header {
