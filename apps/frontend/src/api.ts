@@ -1,6 +1,8 @@
 import type {
   Application,
   ApplicationPackage,
+  AuthResponse,
+  AuthUser,
   DashboardStats,
   Job,
   Keyword,
@@ -31,17 +33,39 @@ type PublicImportResult = {
   }>;
 };
 
+let currentAccessToken: string | null = null;
+let onUnauthorized: (() => void) | null = null;
+
+export const setAccessToken = (token: string | null) => {
+  currentAccessToken = token;
+};
+
+export const setUnauthorizedCallback = (callback: () => void) => {
+  onUnauthorized = callback;
+};
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers);
+  if (!(options.body instanceof FormData)) {
+    if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+  }
+
+  if (currentAccessToken) {
+    headers.set("Authorization", `Bearer ${currentAccessToken}`);
+  }
+
+  options.credentials = "include";
+
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
-    headers:
-      options.body instanceof FormData
-        ? options.headers
-        : {
-            "Content-Type": "application/json",
-            ...(options.headers ?? {})
-          }
+    headers
   });
+
+  if (response.status === 401 && onUnauthorized) {
+    onUnauthorized();
+  }
 
   if (!response.ok) {
     const errorBody = (await response.json().catch(() => null)) as { error?: string };
@@ -51,7 +75,35 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+let refreshPromise: Promise<AuthResponse> | null = null;
+
 export const api = {
+  auth: {
+    register: (payload: Record<string, string>) =>
+      request<AuthResponse>("/auth/register", { method: "POST", body: JSON.stringify(payload) }),
+    login: (payload: Record<string, string>) =>
+      request<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
+    refresh: () => {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) return Promise.reject(new Error("No refresh token"));
+      
+      if (!refreshPromise) {
+        refreshPromise = request<AuthResponse>("/auth/refresh", { 
+          method: "POST", 
+          body: JSON.stringify({ refreshToken }) 
+        }).finally(() => {
+          refreshPromise = null;
+        });
+      }
+      return refreshPromise;
+    },
+    logout: () => {
+      const refreshToken = localStorage.getItem("refreshToken");
+      return request<{ message: string }>("/auth/logout", { method: "POST", body: JSON.stringify({ refreshToken }) });
+    },
+    me: () => request<{ user: AuthUser }>("/auth/me")
+  },
+
   dashboard: () => request<DashboardStats>("/dashboard/stats"),
 
   keywords: {

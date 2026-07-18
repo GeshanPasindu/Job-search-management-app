@@ -8,7 +8,8 @@ import {
   Search,
   Settings,
   Sparkles,
-  Globe,
+  LogOut,
+  Loader,
 } from "lucide-react";
 import { ApplicationsPage } from "./pages/ApplicationsPage";
 import { ApplicationGeneratorPage } from "./pages/ApplicationGeneratorPage";
@@ -19,8 +20,10 @@ import { SearchBuilderPage } from "./pages/SearchBuilderPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SourcesPage } from "./pages/SourcesPage";
 import { TemplatesPage } from "./pages/TemplatesPage";
-import { TopJobsPage } from "./pages/TopJobsPage";
+import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
 import { useState } from "react";
+import { useAuth } from "./hooks/useAuth";
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -37,10 +40,30 @@ const navItems = [
 type PageId = (typeof navItems)[number]["id"];
 
 export default function App() {
+  const { user, loading, logout } = useAuth();
   const [activePage, setActivePage] = useState<PageId>("dashboard");
   const [selectedGeneratorJobId, setSelectedGeneratorJobId] = useState<
     string | null
   >(null);
+  const [authView, setAuthView] = useState<"login" | "register">("login");
+
+  if (loading) {
+    return (
+      <div style={{ display: "grid", placeItems: "center", minHeight: "100vh", backgroundColor: "var(--surface-subtle)" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", color: "var(--muted)" }}>
+          <Loader className="spin" size={32} color="var(--teal)" />
+          <span style={{ fontWeight: 500 }}>Loading Job Search Assistant...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    if (authView === "login") {
+      return <LoginPage onNavigateToRegister={() => setAuthView("register")} />;
+    }
+    return <RegisterPage onNavigateToLogin={() => setAuthView("login")} />;
+  }
 
   function openGenerator(jobId: string) {
     setSelectedGeneratorJobId(jobId);
@@ -73,6 +96,15 @@ export default function App() {
             );
           })}
         </nav>
+        
+        <div className="sidebar-footer" style={{ marginTop: "auto" }}>
+          <nav>
+            <button onClick={logout} title="Sign out">
+              <LogOut size={18} />
+              <span>Sign out</span>
+            </button>
+          </nav>
+        </div>
       </aside>
 
       <main className="workspace">

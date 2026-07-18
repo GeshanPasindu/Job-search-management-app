@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { jobStatuses } from "../domain/defaults";
 import { ApiError, parseOptionalDate } from "../lib/http";
-import { getDefaultUser, prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 
 export const applicationInputSchema = z.object({
   jobId: z.string().min(1),
@@ -30,9 +30,8 @@ function emptyToNull(value: string | null | undefined) {
 }
 
 export class ApplicationService {
-  async list(query: Record<string, unknown>) {
-    const user = await getDefaultUser();
-    const where: Prisma.ApplicationWhereInput = { userId: user.id };
+  async list(userId: string, query: Record<string, unknown>) {
+    const where: Prisma.ApplicationWhereInput = { userId };
     if (query.status) where.status = String(query.status);
     if (query.roleCategory) where.roleCategory = String(query.roleCategory);
 
@@ -48,16 +47,15 @@ export class ApplicationService {
     });
   }
 
-  async create(input: z.infer<typeof applicationInputSchema>) {
-    const user = await getDefaultUser();
-    const job = await prisma.job.findFirst({ where: { id: input.jobId, userId: user.id } });
+  async create(userId: string, input: z.infer<typeof applicationInputSchema>) {
+    const job = await prisma.job.findFirst({ where: { id: input.jobId, userId } });
     if (!job) {
       throw new ApiError(404, "Job was not found.");
     }
 
     const application = await prisma.application.create({
       data: {
-        userId: user.id,
+        userId,
         jobId: input.jobId,
         applicationPackageId: emptyToNull(input.applicationPackageId),
         cvTemplateId: emptyToNull(input.cvTemplateId),
@@ -84,9 +82,8 @@ export class ApplicationService {
     return application;
   }
 
-  async update(id: string, input: z.infer<typeof applicationUpdateSchema>) {
-    const user = await getDefaultUser();
-    await this.ensureOwnedApplication(id, user.id);
+  async update(userId: string, id: string, input: z.infer<typeof applicationUpdateSchema>) {
+    await this.ensureOwnedApplication(id, userId);
 
     const application = await prisma.application.update({
       where: { id },
@@ -129,9 +126,8 @@ export class ApplicationService {
     return application;
   }
 
-  async delete(id: string) {
-    const user = await getDefaultUser();
-    await this.ensureOwnedApplication(id, user.id);
+  async delete(userId: string, id: string) {
+    await this.ensureOwnedApplication(id, userId);
     await prisma.application.delete({ where: { id } });
     return { id };
   }

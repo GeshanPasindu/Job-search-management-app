@@ -3,7 +3,7 @@ import { z } from "zod";
 import { jobStatuses } from "../domain/defaults";
 import { isTargetJob } from "../domain/job-relevance";
 import { ApiError, parseOptionalDate } from "../lib/http";
-import { getDefaultUser, prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { ScoringService } from "./scoring.service";
 import { SourceService } from "./source.service";
 
@@ -99,9 +99,8 @@ export class JobService {
   private scoringService = new ScoringService();
   private sourceService = new SourceService();
 
-  async list(query: Record<string, unknown>) {
-    const user = await getDefaultUser();
-    const where: Prisma.JobWhereInput = { userId: user.id };
+  async list(userId: string, query: Record<string, unknown>) {
+    const where: Prisma.JobWhereInput = { userId };
     const search = typeof query.search === "string" ? query.search.trim() : "";
 
     if (query.status) where.status = String(query.status);
@@ -141,10 +140,9 @@ export class JobService {
     return query.limit ? visibleJobs.slice(0, Number(query.limit)) : visibleJobs;
   }
 
-  async get(id: string) {
-    const user = await getDefaultUser();
+  async get(userId: string, id: string) {
     const job = await prisma.job.findFirst({
-      where: { id, userId: user.id },
+      where: { id, userId },
       include: { packages: true, applications: true }
     });
     if (!job) {
@@ -154,14 +152,13 @@ export class JobService {
     return job;
   }
 
-  async create(input: JobInput) {
-    const user = await getDefaultUser();
+  async create(userId: string, input: JobInput) {
     const source = input.sourceId ? await this.findSource(input.sourceId) : null;
-    const score = await this.scoringService.scoreJob(input);
+    const score = await this.scoringService.scoreJob(input, userId);
 
     return prisma.job.create({
       data: {
-        userId: user.id,
+        userId,
         sourceId: emptyToNull(input.sourceId),
         sourceName: emptyToNull(input.sourceName) ?? source?.name ?? null,
         title: input.title,
@@ -184,9 +181,8 @@ export class JobService {
     });
   }
 
-  async update(id: string, input: Partial<JobInput>) {
-    const user = await getDefaultUser();
-    await this.ensureOwnedJob(id, user.id);
+  async update(userId: string, id: string, input: Partial<JobInput>) {
+    await this.ensureOwnedJob(id, userId);
 
     const updated = await prisma.job.update({
       where: { id },
@@ -219,26 +215,25 @@ export class JobService {
       input.salaryText !== undefined ||
       input.seniority !== undefined
     ) {
-      return this.scoreAndPersist(updated.id);
+      return this.scoreAndPersist(userId, updated.id);
     }
 
     return updated;
   }
 
-  async delete(id: string) {
-    const user = await getDefaultUser();
-    await this.ensureOwnedJob(id, user.id);
+  async delete(userId: string, id: string) {
+    await this.ensureOwnedJob(id, userId);
     await prisma.job.delete({ where: { id } });
     return { id };
   }
 
-  async importManual(input: ManualImportInput) {
-    return this.create(extractManualFields(input));
+  async importManual(userId: string, input: ManualImportInput) {
+    return this.create(userId, extractManualFields(input));
   }
 
-  async scoreAndPersist(id: string) {
-    const job = await this.get(id);
-    const score = await this.scoringService.scoreJob(job);
+  async scoreAndPersist(userId: string, id: string) {
+    const job = await this.get(userId, id);
+    const score = await this.scoringService.scoreJob(job, userId);
 
     return prisma.job.update({
       where: { id },
@@ -246,13 +241,12 @@ export class JobService {
     });
   }
 
-  async rescoreAll() {
-    const user = await getDefaultUser();
-    const jobs = await prisma.job.findMany({ where: { userId: user.id } });
+  async rescoreAll(userId: string) {
+    const jobs = await prisma.job.findMany({ where: { userId } });
     const updated = [];
 
     for (const job of jobs) {
-      updated.push(await this.scoreAndPersist(job.id));
+      updated.push(await this.scoreAndPersist(userId, job.id));
     }
 
     return updated;

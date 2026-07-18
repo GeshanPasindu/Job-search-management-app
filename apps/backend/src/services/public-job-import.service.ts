@@ -2,7 +2,7 @@ import { load } from "cheerio";
 import { z } from "zod";
 import { isTargetJob } from "../domain/job-relevance";
 import { ApiError, parseOptionalDate } from "../lib/http";
-import { getDefaultUser, prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { ScoringService } from "./scoring.service";
 import { SourceService } from "./source.service";
 
@@ -280,7 +280,7 @@ export class PublicJobImportService {
   private sourceService = new SourceService();
   private scoringService = new ScoringService();
 
-  async importJobs(input: z.infer<typeof publicJobImportSchema>) {
+  async importJobs(userId: string, input: z.infer<typeof publicJobImportSchema>) {
     const source = await this.sourceService.get(input.sourceId);
     if (!source.enabled) {
       throw new ApiError(400, `${source.name} is disabled.`);
@@ -302,7 +302,7 @@ export class PublicJobImportService {
     }
 
     const datedJobs = filterByImportDate(jobs, input);
-    const targetKeywords = await this.relevanceKeywordsFor(input);
+    const targetKeywords = await this.relevanceKeywordsFor(userId, input);
     const eligibleJobs = input.strictRelevance
       ? datedJobs.filter((job) => isTargetJob(job, { targetKeywords }))
       : datedJobs;
@@ -312,7 +312,7 @@ export class PublicJobImportService {
     const skipped = [];
 
     for (const job of jobsToSave) {
-      const result = await this.saveImportedJob(job);
+      const result = await this.saveImportedJob(userId, job);
       if (result.created) {
         saved.push(result.job);
       } else {
@@ -330,7 +330,7 @@ export class PublicJobImportService {
     };
   }
 
-  async importAllJobs(input: z.infer<typeof publicJobImportAllSchema>) {
+  async importAllJobs(userId: string, input: z.infer<typeof publicJobImportAllSchema>) {
     const sources = await this.sourceService.list();
     const sourceIdFilter = new Set(input.sourceIds ?? []);
     const importableSources = sources.filter(
@@ -358,7 +358,7 @@ export class PublicJobImportService {
 
     for (const source of importableSources) {
       try {
-        const result = await this.importJobs({
+        const result = await this.importJobs(userId, {
           ...input,
           sourceId: source.id,
           keywords: importKeywords,
@@ -706,26 +706,24 @@ export class PublicJobImportService {
     });
   }
 
-  private async relevanceKeywordsFor(input: z.infer<typeof publicJobImportSchema>) {
+  private async relevanceKeywordsFor(userId: string, input: z.infer<typeof publicJobImportSchema>) {
     const explicitKeywords = uniqueKeywords(input).filter(Boolean);
-    return explicitKeywords.length > 0 ? explicitKeywords : await this.enabledKeywordValues();
+    return explicitKeywords.length > 0 ? explicitKeywords : await this.enabledKeywordValues(userId);
   }
 
-  private async enabledKeywordValues() {
-    const user = await getDefaultUser();
+  private async enabledKeywordValues(userId: string) {
     const keywords = await prisma.keyword.findMany({
-      where: { userId: user.id, enabled: true },
+      where: { userId, enabled: true },
       orderBy: [{ priority: "desc" }, { keyword: "asc" }]
     });
 
     return keywords.map((keyword) => keyword.keyword);
   }
 
-  private async saveImportedJob(job: PublicJobInput) {
-    const user = await getDefaultUser();
+  private async saveImportedJob(userId: string, job: PublicJobInput) {
     const existing = await prisma.job.findFirst({
       where: {
-        userId: user.id,
+        userId,
         OR: [
           ...(job.jobUrl ? [{ jobUrl: job.jobUrl }] : []),
           {
@@ -741,11 +739,11 @@ export class PublicJobImportService {
       return { created: false, job: existing };
     }
 
-    const score = await this.scoringService.scoreJob(job);
+    const score = await this.scoringService.scoreJob(job, userId);
 
     const created = await prisma.job.create({
       data: {
-        userId: user.id,
+        userId,
         sourceId: job.sourceId,
         sourceName: job.sourceName,
         title: job.title,

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defaultCoverLetterTemplate } from "../domain/defaults";
 import { ApiError } from "../lib/http";
-import { getDefaultUser, prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 import {
   AiApplicationAssistant,
   ApplicationAssistantContext,
@@ -43,11 +43,11 @@ export class ApplicationPackageService {
   private templateService = new TemplateService();
   private aiAssistant: AiApplicationAssistant = new DisabledAiApplicationAssistant();
 
-  async generate(input: GenerateInput) {
-    const user = await getDefaultUser();
+  async generate(userId: string, input: GenerateInput) {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
     const [job, profile] = await Promise.all([
-      prisma.job.findFirst({ where: { id: input.jobId, userId: user.id } }),
-      prisma.userProfile.findUnique({ where: { userId: user.id } })
+      prisma.job.findFirst({ where: { id: input.jobId, userId } }),
+      prisma.userProfile.findUnique({ where: { userId } })
     ]);
 
     if (!job) {
@@ -56,13 +56,13 @@ export class ApplicationPackageService {
 
     const roleCategory = input.roleCategory ?? job.matchingCategory ?? "Integration";
     const cvTemplate = input.cvTemplateId
-      ? await prisma.cvTemplate.findFirst({ where: { id: input.cvTemplateId, userId: user.id } })
-      : await this.templateService.findDefaultCv(user.id, roleCategory);
+      ? await prisma.cvTemplate.findFirst({ where: { id: input.cvTemplateId, userId } })
+      : await this.templateService.findDefaultCv(userId, roleCategory);
     const coverLetterTemplate = input.coverLetterTemplateId
       ? await prisma.coverLetterTemplate.findFirst({
-          where: { id: input.coverLetterTemplateId, userId: user.id }
+          where: { id: input.coverLetterTemplateId, userId }
         })
-      : await this.templateService.findDefaultCoverLetter(user.id, roleCategory);
+      : await this.templateService.findDefaultCoverLetter(userId, roleCategory);
 
     const matchedSkillsText = listText(job.matchedSkills, "the relevant skills in my profile");
     const missingSkillsText = listText(job.missingSkills, "no major gaps identified from the pasted posting");
@@ -120,7 +120,7 @@ export class ApplicationPackageService {
 
     return prisma.applicationPackage.create({
       data: {
-        userId: user.id,
+        userId,
         jobId: job.id,
         cvTemplateId: cvTemplate?.id,
         coverLetterTemplateId: coverLetterTemplate?.id,
@@ -147,10 +147,9 @@ export class ApplicationPackageService {
     });
   }
 
-  async get(id: string) {
-    const user = await getDefaultUser();
+  async get(userId: string, id: string) {
     const applicationPackage = await prisma.applicationPackage.findFirst({
-      where: { id, userId: user.id },
+      where: { id, userId },
       include: { job: true, cvTemplate: true, coverLetterTemplate: true }
     });
     if (!applicationPackage) {
@@ -160,8 +159,8 @@ export class ApplicationPackageService {
     return applicationPackage;
   }
 
-  async update(id: string, input: z.infer<typeof updateApplicationPackageSchema>) {
-    await this.get(id);
+  async update(userId: string, id: string, input: z.infer<typeof updateApplicationPackageSchema>) {
+    await this.get(userId, id);
     return prisma.applicationPackage.update({
       where: { id },
       data: input,

@@ -48,7 +48,7 @@ router.post(
   "/job-alerts/import",
   asyncHandler(async (req, res) => {
     const body = validateBody(emailJobImportSchema, req.body);
-    res.status(201).json(await emailJobImportService.importJobAlerts(body));
+    res.status(201).json(await emailJobImportService.importJobAlerts(req.user!.id, body));
   })
 );
 

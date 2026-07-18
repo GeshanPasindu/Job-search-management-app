@@ -17,8 +17,8 @@ const profileUpdateSchema = z.object({
 
 router.get(
   "/",
-  asyncHandler(async (_req, res) => {
-    res.json(await profileService.get());
+  asyncHandler(async (req, res) => {
+    res.json(await profileService.get(req.user!.id));
   })
 );
 
@@ -27,7 +27,7 @@ router.put(
   asyncHandler(async (req, res) => {
     const body = validateBody(profileUpdateSchema, req.body);
     res.json(
-      await profileService.update({
+      await profileService.update(req.user!.id, {
         ...body,
         preferredRoles:
           body.preferredRoles !== undefined ? parseStringList(body.preferredRoles) : undefined,

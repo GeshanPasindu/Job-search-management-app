@@ -36,8 +36,8 @@ const upload = multer({
 
 router.get(
   "/",
-  asyncHandler(async (_req, res) => {
-    res.json(await templateService.list());
+  asyncHandler(async (req, res) => {
+    res.json(await templateService.list(req.user!.id));
   })
 );
 
@@ -46,14 +46,14 @@ router.post(
   upload.single("file"),
   asyncHandler(async (req, res) => {
     const body = validateBody(templateUploadSchema, req.body);
-    res.status(201).json(await templateService.create(body, toStoredFile(req.file)));
+    res.status(201).json(await templateService.create(req.user!.id, body, toStoredFile(req.file)));
   })
 );
 
 router.get(
   "/:id",
   asyncHandler(async (req, res) => {
-    res.json(await templateService.get(req.params.id));
+    res.json(await templateService.get(req.user!.id, req.params.id));
   })
 );
 
@@ -61,14 +61,14 @@ router.put(
   "/:id",
   asyncHandler(async (req, res) => {
     const body = validateBody(templateUpdateSchema, req.body);
-    res.json(await templateService.update(req.params.id, body));
+    res.json(await templateService.update(req.user!.id, req.params.id, body));
   })
 );
 
 router.delete(
   "/:id",
   asyncHandler(async (req, res) => {
-    res.json(await templateService.delete(req.params.id));
+    res.json(await templateService.delete(req.user!.id, req.params.id));
   })
 );
 
