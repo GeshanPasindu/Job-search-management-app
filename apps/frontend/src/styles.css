@@ -451,6 +451,15 @@ tbody tr:hover,
   background: #f2f7f8;
 }
 
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:focus-visible {
+  outline: 2px solid #0b665f;
+  outline-offset: -2px;
+}
+
 .score-badge,
 .status-badge,
 .pill {
@@ -729,6 +738,10 @@ tbody tr:hover,
   border-radius: 8px;
   background: #ffffff;
   box-shadow: 0 18px 44px rgba(23, 32, 51, 0.22);
+}
+
+.modal-panel-wide {
+  width: min(1120px, 100%);
 }
 
 .modal-header {
