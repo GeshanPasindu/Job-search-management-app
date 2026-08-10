@@ -1,5 +1,7 @@
 # Job Search CRM and Application Assistant
 
+Full-stack application for managing job discovery, matching, application materials and application tracking.
+
 A local full-stack MVP for collecting job postings, generating safe manual-open search URLs, scoring jobs against a target profile, managing CV/cover-letter templates, generating application packages, and tracking applications.
 
 ## Stack
